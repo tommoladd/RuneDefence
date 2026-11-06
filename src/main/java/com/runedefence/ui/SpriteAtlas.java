@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import net.runelite.client.util.ImageUtil;
 
-/** Every sprite lives in one small atlas, decoded once at startup and shared. */
+/** Every sprite lives on one of a few small sheets, decoded once at startup and shared. */
 public final class SpriteAtlas
 {
 	public static final class Sprite
@@ -35,13 +35,6 @@ public final class SpriteAtlas
 
 	public SpriteAtlas(Gson gson) throws IOException
 	{
-		BufferedImage source = ImageUtil.loadImageResource(SpriteAtlas.class, "/com/runedefence/sprites.png");
-		// The file is indexed to keep it small, but ARGB is what draws quickly.
-		BufferedImage atlas = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = atlas.createGraphics();
-		g.drawImage(source, 0, 0, null);
-		g.dispose();
-
 		try (InputStream in = SpriteAtlas.class.getResourceAsStream("/com/runedefence/sprites.json"))
 		{
 			if (in == null)
@@ -49,20 +42,35 @@ public final class SpriteAtlas
 				throw new IOException("Missing sprite index");
 			}
 			JsonObject index = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), JsonObject.class);
-			for (Map.Entry<String, JsonElement> entry : index.entrySet())
+			for (Map.Entry<String, JsonElement> sheet : index.entrySet())
 			{
-				JsonArray a = entry.getValue().getAsJsonArray();
-				int x = a.get(0).getAsInt();
-				int y = a.get(1).getAsInt();
-				int w = a.get(2).getAsInt();
-				int h = a.get(3).getAsInt();
-				BufferedImage[] frames = new BufferedImage[a.get(4).getAsInt()];
-				for (int f = 0; f < frames.length; f++)
-				{
-					frames[f] = atlas.getSubimage(x + f * w, y, w, h);
-				}
-				sprites.put(entry.getKey(), new Sprite(frames));
+				loadSheet(sheet.getKey(), sheet.getValue().getAsJsonObject());
 			}
+		}
+	}
+
+	private void loadSheet(String name, JsonObject sheetIndex)
+	{
+		BufferedImage source = ImageUtil.loadImageResource(SpriteAtlas.class, "/com/runedefence/sprites/" + name + ".png");
+		// The file is indexed to keep it small, but ARGB is what draws quickly.
+		BufferedImage sheet = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = sheet.createGraphics();
+		g.drawImage(source, 0, 0, null);
+		g.dispose();
+
+		for (Map.Entry<String, JsonElement> entry : sheetIndex.entrySet())
+		{
+			JsonArray a = entry.getValue().getAsJsonArray();
+			int x = a.get(0).getAsInt();
+			int y = a.get(1).getAsInt();
+			int w = a.get(2).getAsInt();
+			int h = a.get(3).getAsInt();
+			BufferedImage[] frames = new BufferedImage[a.get(4).getAsInt()];
+			for (int f = 0; f < frames.length; f++)
+			{
+				frames[f] = sheet.getSubimage(x + f * w, y, w, h);
+			}
+			sprites.put(entry.getKey(), new Sprite(frames));
 		}
 	}
 

@@ -4,11 +4,16 @@
 Everything is drawn from flat-shaded polygons with a dark outline, which gives
 the low-poly, chunky look of the game's era without using any extracted assets.
 
+Sprites are split across several sheets, because the Plugin Hub flags any image
+that is too large once decoded. See assign_sheets for what goes where.
+
 Outputs:
-  src/main/resources/com/runedefence/sprites.png   the atlas (indexed PNG)
-  src/main/resources/com/runedefence/sprites.json  name -> [x, y, w, h, frames]
+  src/main/resources/com/runedefence/sprites/*.png   the sheets (indexed PNGs)
+  src/main/resources/com/runedefence/sprites.json    sheet -> name -> [x, y, w, h, frames]
   src/main/resources/com/runedefence/panel_icon.png  16x16 navigation icon
   icon.png                                           Plugin Hub icon, not in the jar
+
+Rerun this after changing which map uses an enemy or scenery sprite in content.json.
 
 Run from anywhere: python3 tools/gen_sprites.py [preview.png]
 """
@@ -21,6 +26,14 @@ import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(ROOT, "src", "main", "resources", "com", "runedefence")
+SHEETS = os.path.join(RES, "sprites")
+CONTENT = os.path.join(RES, "content.json")
+
+SHEET_WIDTH = 336
+# The hub measures width * height * 4 and publishes no limit. It has flagged images
+# as small as 1,267,860 bytes, so this stays well clear of that.
+MAX_SHEET_BYTES = 512 * 1024
+DEFENDER_SHEETS = {1: "defenders_small", 2: "defenders_medium", 3: "defenders_large"}
 
 OUTLINE = (24, 18, 12, 255)
 SHADOW = (0, 0, 0, 80)
@@ -2081,16 +2094,50 @@ def render(fn, w, h, f):
     return c
 
 
-def build_atlas():
-    atlas_w = 336
+def assign_sheets(names):
+    """Returns sprite name -> sheet name, worked out from the game data.
+
+    Defenders get a sheet per footprint, since together they're too large for one.
+    A map's sheet holds the enemies and scenery that only it uses. Everything else,
+    such as effects, icons and sprites used on several maps, goes on the shared sheet.
+    """
+    with open(CONTENT, encoding="utf-8") as f:
+        content = json.load(f)
+    defenders = {d["id"]: d for d in content["defenders"]}
+    enemies = {e["id"]: e for e in content["enemies"]}
+    used_by = {}
+    for m in content["maps"]:
+        used = set(m.get("scenery", {}).values()) | set(m.get("monsters", []))
+        for wave in m["waves"]:
+            used.update(group["enemy"] for group in wave["groups"])
+        # Enemies that only appear when another one bursts are still needed here.
+        for enemy in sorted(used & set(enemies)):
+            while enemy:
+                used.add(enemy)
+                enemy = enemies[enemy].get("splitInto")
+        for name in used:
+            used_by.setdefault(name, []).append(m["id"])
+
+    sheets = {}
+    for name in names:
+        if name in defenders:
+            sheets[name] = DEFENDER_SHEETS[defenders[name].get("size", 1)]
+        elif len(used_by.get(name, [])) == 1:
+            sheets[name] = "map_" + used_by[name][0]
+        else:
+            sheets[name] = "shared"
+    return sheets
+
+
+def pack(sprites, width):
     placed = []
     rows = []  # [y, height, used width]
     bottom = 0
     # Tallest first, filling gaps in earlier rows, which keeps the decoded image small.
-    for name, w, h, frames, fn in sorted(SPRITES, key=lambda sprite: -sprite[2]):
+    for name, w, h, frames, fn in sorted(sprites, key=lambda sprite: -sprite[2]):
         total = w * frames
         for row in rows:
-            if row[2] + total <= atlas_w and h <= row[1]:
+            if row[2] + total <= width and h <= row[1]:
                 break
         else:
             row = [bottom, h, 0]
@@ -2098,14 +2145,34 @@ def build_atlas():
             bottom += h
         placed.append((name, row[2], row[0], w, h, frames, fn))
         row[2] += total
-    x, y, row_h = 0, bottom, 0
-    atlas = Canvas(atlas_w, y + row_h)
+    return placed, bottom
+
+
+def build_sheet(sprites):
+    # Decoded memory is what counts, so use whichever width leaves the least empty space.
+    widest = max(sprite[1] * sprite[3] for sprite in sprites)
+    width = min(range(widest, SHEET_WIDTH + 1), key=lambda w: w * pack(sprites, w)[1])
+    placed, height = pack(sprites, width)
+    sheet = Canvas(width, height)
     index = {}
     for name, px, py, w, h, frames, fn in placed:
         for f in range(frames):
-            atlas.blit(render(fn, w, h, f), px + f * w, py)
+            sheet.blit(render(fn, w, h, f), px + f * w, py)
         index[name] = [px, py, w, h, frames]
-    return atlas, index
+    return sheet, index
+
+
+def build_sheets():
+    """Returns sheet name -> (canvas, index), sorted so that output is repeatable."""
+    assigned = assign_sheets([sprite[0] for sprite in SPRITES])
+    built = {}
+    for sheet_name in sorted(set(assigned.values())):
+        built[sheet_name] = build_sheet([s for s in SPRITES if assigned[s[0]] == sheet_name])
+        canvas = built[sheet_name][0]
+        decoded = canvas.w * canvas.h * 4
+        if decoded > MAX_SHEET_BYTES:
+            raise SystemExit("%s decodes to %d bytes, over the %d limit" % (sheet_name, decoded, MAX_SHEET_BYTES))
+    return built
 
 
 def reduce_palette(colours, limit):
@@ -2207,17 +2274,32 @@ def preview(c, path, factor=3):
     write_png(path, bg)
 
 
+def stacked(canvases):
+    out = Canvas(SHEET_WIDTH, sum(c.h for c in canvases))
+    y = 0
+    for c in canvases:
+        out.blit(c, 0, y)
+        y += c.h
+    return out
+
+
 def main():
-    atlas, index = build_atlas()
-    os.makedirs(RES, exist_ok=True)
-    size, colours = write_png(os.path.join(RES, "sprites.png"), atlas)
+    built = build_sheets()
+    os.makedirs(SHEETS, exist_ok=True)
+    # A sheet that no longer exists mustn't linger in the jar.
+    for old in os.listdir(SHEETS):
+        if old.endswith(".png"):
+            os.remove(os.path.join(SHEETS, old))
+    for sheet_name, (canvas, _) in built.items():
+        size, colours = write_png(os.path.join(SHEETS, sheet_name + ".png"), canvas)
+        print("%-28s %dx%d, %d colours, %d bytes, decodes to %d" % (sheet_name, canvas.w, canvas.h, colours, size, canvas.w * canvas.h * 4))
     with open(os.path.join(RES, "sprites.json"), "w") as f:
-        json.dump(index, f, separators=(",", ":"))
+        json.dump({sheet_name: index for sheet_name, (_, index) in built.items()}, f, separators=(",", ":"))
     icon_size, _ = write_png(os.path.join(RES, "panel_icon.png"), nav_icon())
     write_png(os.path.join(ROOT, "icon.png"), hub_icon())
-    print("atlas %dx%d, %d colours, %d bytes; nav icon %d bytes" % (atlas.w, atlas.h, colours, size, icon_size))
+    print("nav icon %d bytes" % icon_size)
     if len(sys.argv) > 1:
-        preview(atlas, sys.argv[1])
+        preview(stacked([canvas for canvas, _ in built.values()]), sys.argv[1])
 
 
 if __name__ == "__main__":
