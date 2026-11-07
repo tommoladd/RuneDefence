@@ -32,6 +32,8 @@ public final class EnemyInstance
 	double slowPercent;
 	double slowTimer;
 	double rootTimer;
+	/** Can't be bound again until this runs out. */
+	double bindLockout;
 	double weakenPercent;
 	double weakenTimer;
 	double gazeTimer;
@@ -76,6 +78,11 @@ public final class EnemyInstance
 	public boolean isRooted()
 	{
 		return rootTimer > 0;
+	}
+
+	boolean canBeBound()
+	{
+		return !def.boss && rootTimer <= 0 && bindLockout <= 0;
 	}
 
 	public boolean isWeakened()

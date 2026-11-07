@@ -50,6 +50,16 @@ public final class DefenderInstance
 		recalculate();
 	}
 
+	/** What a defender at these tiers would be, using the same rules as one on the board. */
+	public static DefenderInstance preview(DefenderDefinition def, int tierA, int tierB)
+	{
+		DefenderInstance d = new DefenderInstance(def, 0, 0);
+		d.tierA = tierA;
+		d.tierB = tierB;
+		d.recalculate();
+		return d;
+	}
+
 	public int tier(int path)
 	{
 		return path == 0 ? tierA : tierB;

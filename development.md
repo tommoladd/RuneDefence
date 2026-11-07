@@ -16,7 +16,7 @@
 | `./gradlew test` | Runs the engine, progression, UI and balance tests. Without `src/test/` it finds nothing to run. | Yes |
 | `./gradlew run` | Launches RuneLite in developer mode with the plugin loaded. | Yes |
 | `./gradlew playDev` | Plays the game in a standalone window, with no OSRS client or login. Its buttons add gold and XP. | Yes |
-| `./gradlew balanceReport` | Prints how far each level gets. Add `--args=maps` to report per map. | Yes |
+| `./gradlew balanceReport` | Prints how far each level gets. Add `--args=maps` to report per map, or `--args=binders` to compare boards with and without binders, which the bot wouldn't otherwise value. | Yes |
 | `./gradlew screenshots` | Renders the panel offscreen into `screenshots/`. This shows the UI and engine only, not the client. | Yes |
 | `python3 tools/gen_sprites.py [preview.png]` | Regenerates the sprite sheets, their index and both icons. | No |
 | `python3 tools/gen_waves.py` | Rewrites waves after 25 in `content.json` from the tables in the script. Waves 1 to 25 are written by hand. | No |
@@ -65,6 +65,10 @@ The script works this out from `content.json`, so rerun it after changing which 
 **XP rate:** only OSRS XP is stored. RuneDefence XP and level are derived from it using the `xpRate` setting, which is shared by all characters. That makes changing the rate reversible, and it needs no save migration. `Progression` clamps the rate to 1 to 10, because a hand-edited profile could otherwise divide by zero.
 
 **Level changes:** lowering the level is safe mid-match, because the engine only checks level when placing a new defender or starting a new match.
+
+**Binding:** a bound enemy stops walking, and bosses can't be bound. A bind also locks the enemy out of being bound again for twice its duration, so nothing can be held for more than half the time, however many binders cover it. That's what makes long or area binds safe to add. Defenders with `seeksUnbound` spread their binds by preferring enemies that can still be held, but they keep attacking when none can.
+
+**Attack speed:** the data stores attacks per second, so a bigger number is faster. Players are always shown seconds between attacks, from `GameEngine.attackInterval`, which is the same value the simulation uses.
 
 ## Changing content
 - Saved matches only restore if their content version matches `version` in `content.json`. Bumping it discards players' saved matches, though not their XP or records.

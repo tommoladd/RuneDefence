@@ -1977,6 +1977,99 @@ def draw_chaos_druid(c, f):
           beard=rgb(0xD8D8D8))
 
 
+def draw_hunter(c, f):
+    bob = (0, -1, -1, 1)[f]
+    pal = dict(skin=rgb(0xD0A07A), skin2=rgb(0xB08460), body=rgb(0x8A6A3A), body2=rgb(0x6E5228),
+               legs=rgb(0x5E6E34), legs2=rgb(0x485628), boot=rgb(0x4A3418), arm=rgb(0x8A6A3A))
+    sx, sy = biped(c, pal, ground=25, height=1.0, bob=bob, swing=(1, 1, 2, 3)[f], lean=(0, 0, -1, 2)[f])
+    hx, hy = sx, sy - 4
+    head(c, hx, hy, 4, pal["skin"], pal["skin2"])
+    # A fur cap with a pale band.
+    c.poly([(hx - 5, hy - 1), (hx - 4, hy - 6), (hx + 4, hy - 6), (hx + 5, hy - 1)], rgb(0x9A7A50))
+    c.rect(hx - 5, hy - 2, 10, 2, rgb(0xD8C8A0))
+    c.rect(hx + 2, hy, 2, 1, OUTLINE)
+    # The net is carried at the hip, swung overhead, then thrown.
+    hand = ((sx + 5, sy + 5), (sx + 5, sy + 4), (sx + 7, sy - 8), (sx + 9, sy + 1))[f]
+    limb(c, sx + 1, sy + 2, hand[0], hand[1], 2, pal["arm"])
+    r = (2.6, 2.6, 3.4, 2.2)[f]
+    c.ell(hand[0], hand[1], r, r, rgb(0xE8E0C8))
+    c.ell(hand[0], hand[1], r - 1.2, r - 1.2, rgb(0xA08A5A))
+    c.outline()
+    c.under_shadow(14, 25.5, 7, 2.5)
+
+
+def draw_druid(c, f):
+    robed(c, f, rgb(0x3E8A34), rgb(0x2C6426), rgb(0xE0D080), rgb(0xD0A888), rgb(0x90E040), rgb(0xF0FFD0),
+          beard=rgb(0xE8E8E0))
+
+
+def draw_kamil(c, f):
+    robed(c, f, rgb(0x34447A), rgb(0x222E5C), rgb(0x90D8F8), rgb(0xB8CCDC), rgb(0xA0E8FF), rgb(0xFFFFFF),
+          staff=rgb(0x90B8D0), beard=rgb(0xD8ECF8), eye=rgb(0x40D0FF))
+    # Ice shards circle it while it casts.
+    if f >= 2:
+        for x, y in ((3, 8), (5, 18), (25, 20)):
+            c.poly([(x, y - 3), (x + 1.5, y), (x, y + 3), (x - 1.5, y)], rgb(0xD8F4FF))
+
+
+def draw_karil(c, f):
+    bob = (0, -1, 0, 1)[f]
+    pal = dict(skin=rgb(0x8E8E72), skin2=rgb(0x6E6E56), body=rgb(0x54503C), body2=rgb(0x3E3A2C),
+               legs=rgb(0x4A4634), legs2=rgb(0x36322A), boot=rgb(0x2A2620), arm=rgb(0x54503C))
+    sx, sy = biped(c, pal, ground=25, height=1.05, bob=bob, swing=(1, 1, 1, 2)[f], lean=(0, 0, -1, 1)[f])
+    hx, hy = sx, sy - 4
+    # A coif around a tainted, skull-like face.
+    c.ell(hx, hy, 5, 5, rgb(0x3E3A2C))
+    head(c, hx + 1, hy, 3, pal["skin"], pal["skin2"])
+    c.rect(hx + 1, hy - 1, 3, 1, rgb(0xA8E040))
+    # A crossbow levelled at the waist, kicking back as it fires.
+    kick = (0, 0, -1, -3)[f]
+    bx, by = sx + 6 + kick, sy + 4
+    limb(c, sx, sy + 2, bx - 1, by, 2, pal["arm"])
+    c.line(bx - 3, by, bx + 7, by, rgb(0x5A3C1C), 2)
+    c.line(bx + 6, by - 5, bx + 6, by + 5, rgb(0x9AA0A8))
+    string_x = bx + (2 if f == 3 else 0)
+    c.line(bx + 6, by - 5, string_x, by, rgb(0xE8E0C8))
+    c.line(bx + 6, by + 5, string_x, by, rgb(0xE8E0C8))
+    if f == 3:
+        c.line(bx + 8, by, bx + 12, by, rgb(0xC8F070))
+    c.outline()
+    c.under_shadow(14, 25.5, 7, 2.5)
+
+
+def draw_tentacle(c, f):
+    # A dark pool at its base, so that it reads as coming up out of the ground.
+    c.ell(14, 23.5, 9, 2.5, rgb(0x1E3A50))
+    c.ell(14, 23.5, 6, 1.5, rgb(0x2E6078))
+    sway = (-2, 2, -3, 1)[f]
+    lash = (0, 0, -4, 10)[f]
+    steps = 14
+    points = []
+    for i in range(steps):
+        t = i / (steps - 1)
+        x = 14 + sway * math.sin(t * 3.2) + lash * t * t
+        y = 23 - (18 - abs(lash) * 0.5) * t + abs(lash) * 0.3 * t * t
+        points.append((x, y, 3.8 * (1 - t) + 0.9))
+    for x, y, r in points:
+        c.ell(x, y, r, r, rgb(0x6A3E86))
+    for x, y, r in points:
+        c.ell(x - r * 0.35, y, max(r * 0.55, 0.6), max(r * 0.55, 0.6), rgb(0x4E2A66))
+    # Pale suckers up its leading edge.
+    for x, y, r in points[1:-1:2]:
+        c.px(x + r * 0.5, y, rgb(0xD8A8E0))
+    c.outline()
+    c.under_shadow(14, 25.5, 9, 2.5)
+
+
+def draw_net(c, f):
+    col = rgb(0xE8DCB0)
+    shift = f % 2
+    c.ell(4, 4, 3.6, 3.6, rgb(0x8A7648))
+    for i in (1 + shift, 4, 7 - shift):
+        c.line(i, 1, i, 7, col)
+        c.line(1, i, 7, i, col)
+
+
 # name, cell width, cell height, frames, draw function
 SPRITES = [
     ("goblin", 28, 28, 4, draw_goblin),
@@ -1984,6 +2077,11 @@ SPRITES = [
     ("archer", 28, 28, 4, draw_archer),
     ("dark_wizard", 28, 28, 4, draw_wizard),
     ("dwarf", 28, 28, 4, draw_dwarf),
+    ("hunter", 28, 28, 4, draw_hunter),
+    ("druid", 28, 28, 4, draw_druid),
+    ("kraken_tentacle", 28, 28, 4, draw_tentacle),
+    ("karil", 28, 28, 4, draw_karil),
+    ("kamil", 28, 28, 4, draw_kamil),
     ("giant_rat", 28, 28, 4, draw_rat),
     ("goblin_raider", 28, 28, 4, draw_raider),
     ("skeleton", 28, 28, 4, draw_skeleton),
@@ -2074,6 +2172,7 @@ SPRITES = [
     ("dust", 28, 28, 3, draw_dust),
     ("rock_shot", 9, 9, 2, draw_rock_shot),
     ("orb", 9, 9, 2, draw_orb),
+    ("net", 9, 9, 2, draw_net),
     ("flame", 9, 9, 2, orb_of(rgb(0xE8601C), rgb(0xFFC840))),
     ("ice", 9, 9, 2, orb_of(rgb(0x60B8E8), rgb(0xE0F8FF))),
     ("holy", 9, 9, 2, orb_of(rgb(0x4070E0), rgb(0xFFF8C0))),
@@ -2082,6 +2181,7 @@ SPRITES = [
     ("fire_blast", 28, 28, 3, burst_of((rgb(0xFFE060), rgb(0xFF8020), rgb(0xB83818)))),
     ("ice_blast", 28, 28, 3, burst_of((rgb(0xFFFFFF), rgb(0x90D8F8), rgb(0x4898C8)))),
     ("dust_blast", 28, 28, 3, burst_of((rgb(0xE8E0C8), rgb(0xB8A880), rgb(0x806E50)))),
+    ("vine_blast", 28, 28, 3, burst_of((rgb(0xD8F0A0), rgb(0x78B840), rgb(0x3A6E24)))),
     ("coin", 13, 13, 1, draw_coin),
     ("heart", 13, 13, 1, draw_heart),
     ("lock", 13, 13, 1, draw_lock),

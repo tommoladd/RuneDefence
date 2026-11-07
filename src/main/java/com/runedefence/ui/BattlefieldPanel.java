@@ -543,6 +543,15 @@ final class BattlefieldPanel extends JComponent
 			int h = sprite.height * tile / NATIVE_TILE;
 			int left = (int) x - w / 2;
 			int top = (int) y + FEET_BELOW_CENTRE * tile / NATIVE_TILE - h + SPRITE_FOOT_MARGIN;
+			if (e.isRooted())
+			{
+				// A snare around its feet, big enough to see at a glance in a crowd.
+				int ringWidth = Math.max(w * 3 / 4, tile * 2 / 3);
+				g.setColor(Theme.BIND_FILL);
+				g.fillOval((int) x - ringWidth / 2, top + h - tile / 4, ringWidth, tile / 3);
+				g.setColor(Theme.BIND_LINE);
+				g.drawOval((int) x - ringWidth / 2, top + h - tile / 4, ringWidth, tile / 3);
+			}
 			drawFacing(g, sprite.frames[(int) (e.progress * 5) % sprite.frames.length], left, top, w, h, e.facingLeft);
 			paintStatuses(g, e, (int) x, top + 1);
 			if (e.hp < e.maxHp)

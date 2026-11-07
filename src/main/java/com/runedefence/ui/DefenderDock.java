@@ -103,7 +103,7 @@ final class DefenderDock extends JPanel
 			else
 			{
 				boolean afford = engine.gold() >= next.cost && engine.isMatchActive();
-				paths[i].setLabel(next.name + " (" + next.cost + "g)", next.description);
+				paths[i].setLabel(next.name + " (" + next.cost + "g)", upgradeTip(d, next, i));
 				paths[i].setTextColour(afford ? Theme.YELLOW : Theme.RED);
 				paths[i].setEnabled(engine.isMatchActive());
 			}
@@ -112,6 +112,18 @@ final class DefenderDock extends JPanel
 		sell.setLabel("Sell (" + GameEngine.sellValue(d) + "g)", "Refunds 70% of the gold spent on this defender");
 		sell.setEnabled(engine.isMatchActive());
 		title.repaint();
+	}
+
+	/** What this upgrade would do to this defender, as it stands on this board. */
+	private String upgradeTip(DefenderInstance d, UpgradeDefinition next, int path)
+	{
+		StringBuilder tip = new StringBuilder("<html>").append(next.description);
+		double speedBoost = (1 + d.auraSpeed) * engine.map().defenderSpeed;
+		for (String effect : DefenderText.upgradeEffects(d.def, d.tierA, d.tierB, path, 1 + d.auraDamage, speedBoost))
+		{
+			tip.append("<br>").append(effect.replace(">", "&gt;"));
+		}
+		return tip.append("</html>").toString();
 	}
 
 	private final class Title extends JComponent
@@ -132,9 +144,10 @@ final class DefenderDock extends JPanel
 			Graphics2D g = (Graphics2D) graphics;
 			g.setFont(Theme.small());
 			Theme.text(g, d.def.name, 4, 13, Theme.ORANGE);
-			setToolTipText("Damage, attacks per second and range, including any aura from a neighbour");
-			String stats = String.format(Locale.ROOT, "%d  %.1f/s  %.1f", d.effectiveDamage(), d.effectiveAttacksPerSecond(), d.range);
-			Theme.text(g, stats, getWidth() - g.getFontMetrics().stringWidth(stats) - 4, 13, Theme.TEXT);
+			setToolTipText("Damage, seconds between attacks (lower is faster) and range. Green means a nearby ally is boosting it.");
+			String stats = String.format(Locale.ROOT, "%d  %s  %.1f", d.effectiveDamage(), DefenderText.seconds(engine.attackInterval(d)), d.range);
+			boolean boosted = d.auraDamage > 0 || d.auraSpeed > 0;
+			Theme.text(g, stats, getWidth() - g.getFontMetrics().stringWidth(stats) - 4, 13, boosted ? Theme.GREEN : Theme.TEXT);
 		}
 	}
 }

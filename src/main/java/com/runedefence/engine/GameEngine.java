@@ -27,8 +27,14 @@ public final class GameEngine
 
 	private static final double ATTACK_ANIM_SECONDS = 0.25;
 	private static final double HIT_ANIM_SECONDS = 0.1;
-	private static final double ARMOUR_BREAK_SECONDS = 4;
-	private static final double DEFAULT_CRIT_MULTIPLIER = 2;
+	public static final double ARMOUR_BREAK_SECONDS = 4;
+	public static final double DEFAULT_CRIT_MULTIPLIER = 2;
+	/**
+	 * Measured from the moment a bind lands, as a multiple of how long it holds. At 2, an
+	 * enemy walks for at least as long as it was held, so it can't be frozen more than
+	 * half the time, however many binders cover it.
+	 */
+	private static final double BIND_LOCKOUT_RATIO = 2;
 	private static final int FX_CAPACITY = 64;
 	private static final int MAX_PROJECTILES = 200;
 	private static final double MAX_SLOW = 0.8;
@@ -550,6 +556,7 @@ public final class GameEngine
 		}
 		e.slowTimer -= STEP_SECONDS;
 		e.rootTimer -= STEP_SECONDS;
+		e.bindLockout -= STEP_SECONDS;
 		e.weakenTimer -= STEP_SECONDS;
 		if (e.def.regenPerSecond > 0 && e.hp < e.maxHp)
 		{
@@ -625,8 +632,14 @@ public final class GameEngine
 				continue;
 			}
 			fire(d, target);
-			d.cooldown += 1 / (d.effectiveAttacksPerSecond() * map.defenderSpeed);
+			d.cooldown += attackInterval(d);
 		}
+	}
+
+	/** Real seconds between this defender's attacks, on this map, with any aura. Lower is faster. */
+	public double attackInterval(DefenderInstance d)
+	{
+		return 1 / (d.effectiveAttacksPerSecond() * map.defenderSpeed);
 	}
 
 	private void animateDefenders()
@@ -786,9 +799,10 @@ public final class GameEngine
 			e.slowPercent = e.slowTimer > 0 ? Math.max(e.slowPercent, slow) : slow;
 			e.slowTimer = s.slowSeconds;
 		}
-		if (s.rootChance > 0 && !e.def.boss && rng.nextDouble() < s.rootChance)
+		if (s.rootChance > 0 && e.canBeBound() && rng.nextDouble() < s.rootChance)
 		{
 			e.rootTimer = s.rootSeconds;
+			e.bindLockout = s.rootSeconds * BIND_LOCKOUT_RATIO;
 		}
 		if (s.weakenPercent > 0)
 		{

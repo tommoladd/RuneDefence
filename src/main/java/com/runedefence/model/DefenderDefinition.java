@@ -27,6 +27,8 @@ public final class DefenderDefinition extends Effects
 	public boolean precise;
 	/** Swaps between physical and magic damage on every attack. */
 	public boolean alternatesDamage;
+	/** Prefers enemies it can still bind, whatever its targeting mode. */
+	public boolean seeksUnbound;
 	public UpgradeDefinition[] pathA;
 	public UpgradeDefinition[] pathB;
 

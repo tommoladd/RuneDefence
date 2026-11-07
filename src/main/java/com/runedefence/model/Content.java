@@ -20,6 +20,20 @@ public final class Content
 		return null;
 	}
 
+	/** The next defender a player of this level will unlock, or null if they have them all. */
+	public DefenderDefinition nextUnlock(int level)
+	{
+		DefenderDefinition next = null;
+		for (DefenderDefinition d : defenders)
+		{
+			if (d.requiredLevel > level && (next == null || d.requiredLevel < next.requiredLevel))
+			{
+				next = d;
+			}
+		}
+		return next;
+	}
+
 	public EnemyDefinition enemy(String id)
 	{
 		for (EnemyDefinition e : enemies)

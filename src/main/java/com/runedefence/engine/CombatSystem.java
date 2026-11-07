@@ -15,6 +15,7 @@ final class CombatSystem
 	{
 		EnemyInstance best = null;
 		double bestScore = 0;
+		boolean bestWanted = false;
 		double rangeSq = d.range * d.range;
 		TargetingMode mode = d.targeting;
 		for (int i = 0, n = enemies.size(); i < n; i++)
@@ -51,10 +52,13 @@ final class CombatSystem
 					score = -e.distanceLeft();
 					break;
 			}
-			if (best == null || score > bestScore)
+			// A binder spreads out rather than re-hitting what it can't hold, but never holds fire.
+			boolean wanted = !d.def.seeksUnbound || e.canBeBound();
+			if (best == null || (wanted && !bestWanted) || (wanted == bestWanted && score > bestScore))
 			{
 				best = e;
 				bestScore = score;
+				bestWanted = wanted;
 			}
 		}
 		return best;

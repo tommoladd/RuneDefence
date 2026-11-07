@@ -16,6 +16,8 @@ final class Theme
 
 	static final Color TEXT = new Color(0xE8DFC0);
 	static final Color TEXT_DIM = new Color(0x9A927A);
+	/** For secondary text that still has to be read comfortably on a stone slab. */
+	static final Color TEXT_MUTED = new Color(0xC4BA9C);
 	static final Color YELLOW = new Color(0xFFE040);
 	static final Color ORANGE = new Color(0xFF981F);
 	static final Color GREEN = new Color(0x40D040);
@@ -43,9 +45,13 @@ final class Theme
 	static final Color SLOW_CHIP = new Color(0x70C8F0);
 	static final Color ROOT_CHIP = new Color(0x58B030);
 	static final Color CURSE_CHIP = new Color(0xB060E0);
+	static final Color BIND_FILL = new Color(88, 176, 48, 110);
+	static final Color BIND_LINE = new Color(0xB8F080);
 	static final Color RANGE_FILL = new Color(255, 255, 255, 28);
 	static final Color RANGE_LINE = new Color(255, 255, 255, 130);
 	static final Color SELECT_LINE = new Color(0xFFE040);
+	static final Color XP_FILL = new Color(0x1F7A2E);
+	static final Color WAVE_FILL = new Color(0xC88810);
 
 	private Theme()
 	{

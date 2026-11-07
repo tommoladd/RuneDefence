@@ -34,6 +34,7 @@ public final class ContentValidator
 			check(d.burnDps >= 0 && d.splash >= 0 && d.armourPierce >= 0, d.id + ": bad effect");
 			check(positive(d.rangeTiles) && positive(d.attacksPerSecond), d.id + ": bad range or attack speed");
 			check(d.damage > 0, d.id + ": damage must be positive");
+			check(d.rootChance == 0 || positive(d.rootSeconds), d.id + ": a bind needs a duration");
 			check(d.damageType != null && d.targeting != null, d.id + ": missing damage type or targeting");
 			boolean ranged = d.projectile != null && !d.projectile.isEmpty();
 			check(!ranged || positive(d.projectileSpeed), d.id + ": projectile needs a speed");
@@ -66,6 +67,7 @@ public final class ContentValidator
 		for (UpgradeDefinition u : path)
 		{
 			check(u.cost > 0 && u.name != null, d.id + ": bad upgrade " + u.id);
+			check(u.rootChance == 0 || positive(d.rootSeconds) || positive(u.rootSeconds), d.id + ": " + u.id + " binds with no duration");
 		}
 	}
 

@@ -116,7 +116,7 @@ public final class RuneDefencePanel extends PluginPanel
 		shop = new ShopDock(engine, atlas, field);
 		detail = new DefenderDock(engine, field, this::refreshUi);
 		roster = new RosterView(engine.content(), atlas);
-		progressView = new ProgressView(engine.content());
+		progressView = new ProgressView(engine.content(), atlas);
 
 		setLayout(new BorderLayout());
 		setBackground(Theme.STONE_DARK);
@@ -245,7 +245,7 @@ public final class RuneDefencePanel extends PluginPanel
 		engine.setPlayerLevel(level);
 		hud.setLevel(level);
 		shop.setLevel(level);
-		roster.setLevel(level);
+		roster.setProgress(progress);
 		progressView.setProgress(progress);
 		refreshUi();
 	}
